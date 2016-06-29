@@ -1,0 +1,70 @@
+<workflow-app name="npnoxmlparse-wf" xmlns="uri:oozie:workflow:0.5">
+   <start to="spark-etl"/>
+    <kill name="kill">
+        <message>操作失败，错误消息[${wf:errorMessage(wf:lastErrorNode())}]</message>
+    </kill>
+    <action name="spark-etl">
+        <spark xmlns="uri:oozie:spark-action:0.1">
+            <job-tracker>${jobTracker}</job-tracker>
+            <name-node>${nameNode}</name-node>
+	    <prepare>
+                <delete path="${jobOutput}/*/${THISMON}"/>
+            </prepare>
+            <master>${sparkMaster}</master>
+            <mode>${sparkMode}</mode>
+            <name>kpiEtlMon</name>
+              <class>com.tescomm.npno.etl.KpiParaEtlMonth</class>
+            <jar>/lib/npno_2.10-1.0.jar,/lib/redisclient_2.10-2.12.jar,/lib/commons-pool-1.5.6.jar,/lib/jedis-2.1.0.jar</jar>
+              <arg>${jobInputPrefix}/${LASTMON}</arg>
+              <arg>${jobOutput}</arg>
+              <arg>${LASTMON}</arg>
+        </spark>
+        <ok to="spark-jdbc"/>
+        <!--<ok to="sqoop-fork"/>-->
+        <error to="kill"/>
+    </action>
+    <action name="spark-jdbc">
+        <spark xmlns="uri:oozie:spark-action:0.1">
+            <job-tracker>${jobTracker}</job-tracker>
+            <name-node>${nameNode}</name-node>
+            <master>${sparkMaster}</master>
+            <mode>${sparkMode}</mode>
+            <name>spark jdbc</name>
+              <class>com.tescomm.npno.etl.PreSum</class>
+            <jar>/lib/npno_2.10-1.0.jar</jar>
+              <arg>${VERSION}</arg>
+              <arg>${jobOutput}</arg>
+              <arg>${LASTMON}</arg>
+        </spark>
+        <ok to="xmlparse"/>
+        <error to="kill"/>
+    </action>
+    <action name="xmlparse">
+        <spark xmlns="uri:oozie:spark-action:0.1">
+            <job-tracker>${jobTracker}</job-tracker>
+            <name-node>${nameNode}</name-node>
+            <!--<prepare>
+                <delete path="${jobOutput}"/>
+            </prepare>-->
+            <configuration>
+                <property>
+                    <name>mapred.compress.map.output</name>
+                    <value>true</value>
+                </property>
+            </configuration>
+            <master>${sparkMaster}</master>
+            <mode>${sparkMode}</mode>
+            <name>xmlparsetomysql</name>
+            <class>com.tescomm.npno.xmlparse.XmlSqlAndToMysql</class>
+            <jar>/lib/mysql-connector-java-5.1.37.jar,/lib/npno_2.10-1.0.jar</jar>
+            <spark-opts>--executor-memory 2G --num-executors 3</spark-opts>
+            <arg>${xmlInputDir}</arg>
+        </spark>
+        <ok to="end"/>
+        <error to="fail"/>
+    </action>
+    <kill name="fail">
+        <message>error message[${wf:errorMessage(wf:actionData('npnoxmlparse-wf')["fail"])}]</message>
+    </kill>
+    <end name="end"/>
+</workflow-app>

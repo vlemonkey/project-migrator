@@ -1,0 +1,338 @@
+<workflow-app name="${projectName}day-wf" xmlns="uri:oozie:workflow:0.5">
+   <start to="fixedKpiParaEtl"/>
+    <action name="fixedKpiParaEtl">
+        <spark xmlns="uri:oozie:spark-action:0.1">
+            <job-tracker>${jobTracker}</job-tracker>
+            <name-node>${nameNode}</name-node>
+            <prepare>
+                <delete path="${jobOutput}/*/${YESTERDAY}"/>
+            </prepare>
+            <configuration>
+                <property>
+                    <name>mapred.compress.map.output</name>
+                    <value>true</value>
+                </property>
+            </configuration>
+            <master>${sparkMaster}</master>
+            <mode>${sparkMode}</mode>
+            <name>kpiEtlDay</name>
+            <class>com.tescomm.npno.etl.KpiParaEtlD</class>
+            <jar>/lib/redisclient_2.10-2.12.jar,/lib/commons-pool-1.5.6.jar,/lib/jedis-2.1.0.jar,/lib/npno_2.10-1.0.jar</jar>
+            <spark-opts>--executor-memory 2G --total-executor-cores 30</spark-opts>
+            <arg>${sourcePath}/${YESTERDAY}</arg>
+            <arg>${jobOutput}</arg>
+            <arg>${YESTERDAY}</arg>
+        </spark>
+        <ok to="fork"/>
+        <error to="kill"/>
+    </action>
+
+    <fork name="fork">
+    	<path start='p_d_building_f_g_net'/>
+    	<path start='p_d_building_f_net'/>
+	<path start='p_d_building_net'/>
+	<path start='fixedJDBC'/>
+    </fork>
+
+    <action name="p_d_building_f_g_net">
+	<sqoop xmlns="uri:oozie:sqoop-action:0.2">
+		<job-tracker>${jobTracker}</job-tracker>
+		<name-node>${nameNode}</name-node>
+    		<configuration><property><name>mapred.job.queue.name</name><value>${queueName}</value></property></configuration>
+		<arg>export</arg>
+		<arg>--connect</arg>
+                <arg>${jdbcUrl}</arg>
+                <arg>--username</arg>
+                <arg>${username}</arg>
+                <arg>--password</arg>
+                <arg>${password}</arg>
+                <arg>--table</arg>
+                <arg>p_d_building_f_g_net</arg>
+                <arg>--export-dir</arg>
+                <arg>${fixedSqoopInput}/p_d_building_f_g_net/${YESTERDAY}</arg>
+                <arg>--fields-terminated-by</arg>
+                <arg>,</arg>
+                <arg>--lines-terminated-by</arg>
+                <arg>\n</arg>
+		<arg>--input-null-string</arg>
+		<arg>\\N</arg>
+		<arg>--input-null-non-string</arg>
+		<arg>\\N</arg>
+    	</sqoop>
+    	<ok to="joining" />
+    	<error to="kill" />
+    </action>
+
+    <action name="p_d_building_f_net">
+        <sqoop xmlns="uri:oozie:sqoop-action:0.2">
+                <job-tracker>${jobTracker}</job-tracker>
+                <name-node>${nameNode}</name-node>
+                <configuration><property><name>mapred.job.queue.name</name><value>${queueName}</value></property></configuration>
+                <arg>export</arg>
+                <arg>--connect</arg>
+                <arg>${jdbcUrl}</arg>
+                <arg>--username</arg>
+                <arg>${username}</arg>
+                <arg>--password</arg>
+                <arg>${password}</arg>
+                <arg>--table</arg>
+                <arg>p_d_building_f_net</arg>
+                <arg>--export-dir</arg>
+                <arg>${fixedSqoopInput}/p_d_building_f_net/${YESTERDAY}</arg>
+                <arg>--fields-terminated-by</arg>
+                <arg>,</arg>
+                <arg>--lines-terminated-by</arg>
+                <arg>\n</arg>
+                <arg>--input-null-string</arg>
+                <arg>\\N</arg>
+                <arg>--input-null-non-string</arg>
+                <arg>\\N</arg>
+        </sqoop>
+        <ok to="joining" />
+        <error to="kill" />
+    </action>
+
+    <action name="p_d_building_net">
+        <sqoop xmlns="uri:oozie:sqoop-action:0.2">
+                <job-tracker>${jobTracker}</job-tracker>
+                <name-node>${nameNode}</name-node>
+                <configuration><property><name>mapred.job.queue.name</name><value>${queueName}</value></property></configuration>
+                <arg>export</arg>
+                <arg>--connect</arg>
+                <arg>${jdbcUrl}</arg>
+                <arg>--username</arg>
+                <arg>${username}</arg>
+                <arg>--password</arg>
+                <arg>${password}</arg>
+                <arg>--table</arg>
+                <arg>p_d_building_net</arg>
+                <arg>--export-dir</arg>
+                <arg>${fixedSqoopInput}/p_d_building_net/${YESTERDAY}</arg>
+                <arg>--fields-terminated-by</arg>
+                <arg>,</arg>
+                <arg>--lines-terminated-by</arg>
+                <arg>\n</arg>
+                <arg>--input-null-string</arg>
+                <arg>\\N</arg>
+                <arg>--input-null-non-string</arg>
+                <arg>\\N</arg>
+        </sqoop>
+        <ok to="joining" />
+        <error to="kill" />
+    </action>
+
+    <action name="fixedJDBC">
+        <spark xmlns="uri:oozie:spark-action:0.1">
+            <job-tracker>${jobTracker}</job-tracker>
+            <name-node>${nameNode}</name-node>
+            <master>${sparkMaster}</master>
+            <mode>${sparkMode}</mode>
+            <name>fixed jdbc</name>
+              <class>com.tescomm.npno.etl.PreSum</class>
+            <jar>/lib/npno_2.10-1.0.jar</jar>
+              <arg>${VERSION}</arg>
+              <arg>${jobOutput}</arg>
+              <arg>${YESTERDAY}</arg>
+        </spark>
+        <ok to="dynamicKey"/>
+        <error to="kill"/>
+    </action>
+
+<action name="dynamicKey">
+        <spark xmlns="uri:oozie:spark-action:0.1">
+            <job-tracker>${jobTracker}</job-tracker>
+            <name-node>${nameNode}</name-node>
+            <master>${sparkMaster}</master>
+            <mode>${sparkMode}</mode>
+            <name>dynamicKey</name>
+              <class>com.tescomm.npno.etl.DynamicKeyD</class>
+            <jar>/lib/npno_2.10-1.0.jar,/lib/redisclient_2.10-2.12.jar,/lib/commons-pool-1.5.6.jar,/lib/jedis-2.1.0.jar</jar>
+              <arg>${VERSION}</arg>
+              <arg>${YESTERDAY}</arg>
+              <arg>${TODAY}</arg>
+        </spark>
+        <ok to="dynamicSqoop-p_d_b_f_g_net_view"/>
+        <error to="kill"/>
+    </action>
+
+    <action name="dynamicSqoop-p_d_b_f_g_net_view">
+	<sqoop xmlns="uri:oozie:sqoop-action:0.2">
+    		<job-tracker>${jobTracker}</job-tracker>
+    		<name-node>${nameNode}</name-node>
+    		<configuration><property><name>mapred.job.queue.name</name><value>${queueName}</value></property></configuration>
+		<arg>export</arg>
+                <arg>--connect</arg>
+                <arg>${jdbcUrl}</arg>
+                <arg>--username</arg>
+                <arg>${username}</arg>
+                <arg>--password</arg>
+                <arg>${password}</arg>
+                <arg>--table</arg>
+                <arg>p_d_b_f_g_net_view_${VERSION}</arg>
+                <arg>--export-dir</arg>
+                <arg>${dynamicSqoopInput}/p_d_b_f_g_net_view_${VERSION}</arg>
+                <arg>--fields-terminated-by</arg>
+                <arg>\001</arg>
+                <arg>--lines-terminated-by</arg>
+                <arg>\n</arg>
+		<arg>--input-null-string</arg>
+		<arg>\\N</arg>
+		<arg>--input-null-non-string</arg>
+		<arg>\\N</arg>
+    	</sqoop>
+    	<ok to="p_d_b_f_g_view" />
+    	<error to="kill" />
+    </action>
+
+    <action name="p_d_b_f_g_view">
+        <sqoop xmlns="uri:oozie:sqoop-action:0.2">
+                <job-tracker>${jobTracker}</job-tracker>
+                <name-node>${nameNode}</name-node>
+                <configuration><property><name>mapred.job.queue.name</name><value>${queueName}</value></property></configuration>
+                <arg>export</arg>
+                <arg>--connect</arg>
+                <arg>${jdbcUrl}</arg>
+                <arg>--username</arg>
+                <arg>${username}</arg>
+                <arg>--password</arg>
+                <arg>${password}</arg>
+                <arg>--table</arg>
+                <arg>p_d_b_f_g_view_${VERSION}</arg>
+                <arg>--export-dir</arg>
+                <arg>${dynamicSqoopInput}/p_d_b_f_g_view_${VERSION}</arg>
+                <arg>--fields-terminated-by</arg>
+                <arg>\001</arg>
+                <arg>--lines-terminated-by</arg>
+                <arg>\n</arg>
+                <arg>--input-null-string</arg>
+                <arg>\\N</arg>
+                <arg>--input-null-non-string</arg>
+                <arg>\\N</arg>
+        </sqoop>
+        <ok to="p_d_b_f_net_view" />
+        <error to="kill" />
+    </action>
+
+    <action name="p_d_b_f_net_view">
+        <sqoop xmlns="uri:oozie:sqoop-action:0.2">
+                <job-tracker>${jobTracker}</job-tracker>
+                <name-node>${nameNode}</name-node>
+                <configuration><property><name>mapred.job.queue.name</name><value>${queueName}</value></property></configuration>
+                <arg>export</arg>
+                <arg>--connect</arg>
+                <arg>${jdbcUrl}</arg>
+                <arg>--username</arg>
+                <arg>${username}</arg>
+                <arg>--password</arg>
+                <arg>${password}</arg>
+                <arg>--table</arg>
+                <arg>p_d_b_f_net_view_${VERSION}</arg>
+                <arg>--export-dir</arg>
+                <arg>${dynamicSqoopInput}/p_d_b_f_net_view_${VERSION}</arg>
+                <arg>--fields-terminated-by</arg>
+                <arg>\001</arg>
+                <arg>--lines-terminated-by</arg>
+                <arg>\n</arg>
+                <arg>--input-null-string</arg>
+                <arg>\\N</arg>
+                <arg>--input-null-non-string</arg>
+                <arg>\\N</arg>
+        </sqoop>
+        <ok to="p_d_b_f_view" />
+        <error to="kill" />
+    </action>
+
+    <action name="p_d_b_f_view">
+        <sqoop xmlns="uri:oozie:sqoop-action:0.2">
+                <job-tracker>${jobTracker}</job-tracker>
+                <name-node>${nameNode}</name-node>
+                <configuration><property><name>mapred.job.queue.name</name><value>${queueName}</value></property></configuration>
+                <arg>export</arg>
+                <arg>--connect</arg>
+                <arg>${jdbcUrl}</arg>
+                <arg>--username</arg>
+                <arg>${username}</arg>
+                <arg>--password</arg>
+                <arg>${password}</arg>
+                <arg>--table</arg>
+                <arg>p_d_b_f_view_${VERSION}</arg>
+                <arg>--export-dir</arg>
+                <arg>${dynamicSqoopInput}/p_d_b_f_view_${VERSION}</arg>
+                <arg>--fields-terminated-by</arg>
+                <arg>\001</arg>
+                <arg>--lines-terminated-by</arg>
+                <arg>\n</arg>
+                <arg>--input-null-string</arg>
+                <arg>\\N</arg>
+                <arg>--input-null-non-string</arg>
+                <arg>\\N</arg>
+        </sqoop>
+        <ok to="p_d_b_net_view" />
+        <error to="kill" />
+    </action>
+
+        <action name="p_d_b_net_view">
+        <sqoop xmlns="uri:oozie:sqoop-action:0.2">
+                <job-tracker>${jobTracker}</job-tracker>
+                <name-node>${nameNode}</name-node>
+                <configuration><property><name>mapred.job.queue.name</name><value>${queueName}</value></property></configuration>
+                <arg>export</arg>
+                <arg>--connect</arg>
+                <arg>${jdbcUrl}</arg>
+                <arg>--username</arg>
+                <arg>${username}</arg>
+                <arg>--password</arg>
+                <arg>${password}</arg>
+                <arg>--table</arg>
+                <arg>p_d_b_net_view_${VERSION}</arg>
+                <arg>--export-dir</arg>
+                <arg>${dynamicSqoopInput}/p_d_b_net_view_${VERSION}</arg>
+                <arg>--fields-terminated-by</arg>
+                <arg>\001</arg>
+                <arg>--lines-terminated-by</arg>
+                <arg>\n</arg>
+                <arg>--input-null-string</arg>
+                <arg>\\N</arg>
+                <arg>--input-null-non-string</arg>
+                <arg>\\N</arg>
+        </sqoop>
+        <ok to="p_d_b_view" />
+        <error to="kill" />
+    </action>
+
+        <action name="p_d_b_view">
+        <sqoop xmlns="uri:oozie:sqoop-action:0.2">
+                <job-tracker>${jobTracker}</job-tracker>
+                <name-node>${nameNode}</name-node>
+                <configuration><property><name>mapred.job.queue.name</name><value>${queueName}</value></property></configuration>
+                <arg>export</arg>
+                <arg>--connect</arg>
+                <arg>${jdbcUrl}</arg>
+                <arg>--username</arg>
+                <arg>${username}</arg>
+                <arg>--password</arg>
+                <arg>${password}</arg>
+                <arg>--table</arg>
+                <arg>p_d_b_view_${VERSION}</arg>
+                <arg>--export-dir</arg>
+                <arg>${dynamicSqoopInput}/p_d_b_view_${VERSION}</arg>
+                <arg>--fields-terminated-by</arg>
+                <arg>\001</arg>
+                <arg>--lines-terminated-by</arg>
+                <arg>\n</arg>
+                <arg>--input-null-string</arg>
+                <arg>\\N</arg>
+                <arg>--input-null-non-string</arg>
+                <arg>\\N</arg>
+        </sqoop>
+        <ok to="joining" />
+        <error to="kill" />
+    </action>
+
+    <join name='joining' to='end'/>
+
+    <kill name="kill">
+        <message>error message[${wf:errorMessage(wf:actionData('${projectName}day-wf')["fail"])}]</message>
+    </kill>
+    <end name="end"/>
+</workflow-app>

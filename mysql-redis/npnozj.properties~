@@ -1,0 +1,10 @@
+isdelete=0
+redis.ip=10.95.3.139
+redis.port=6379
+mysql.ip=10.95.3.61
+mysql.port=3306
+mysql.database=netoptimization_zj_data
+mysql.username=root
+mysql.password=tescomm
+
+init.tables=ci_info,building_info,building_floor_info,cell_building_info,buildingant_info,group_info

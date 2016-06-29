@@ -1,0 +1,14 @@
+zkconfig	
+用    途：	在zookeeper里配置watcherserver所需的信息
+限定条件：	需要在集群上zookeeper节点上执行 -- 例如公司测试集群中的10.95.3.138节点
+手动修改：	首先需要修改 zkconfigsh/zkconfig.sh 文件中，关于watcherserver的配置信息
+运    行：	zkconfig/zkconfig.sh		
+
+
+WatcherServer	
+用    途：	供启动watcherserver服务
+限定条件：	在采集机存放解析后文件的服务器上执行-- 例如 10.95.3.144，需要java环境 
+手动修改：	datacollect/zk.properties 中，关于zookeeper的配置
+运    行：	datacollect/run.sh datacollect/zk.properties
+
+

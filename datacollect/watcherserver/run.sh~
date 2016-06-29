@@ -1,0 +1,52 @@
+#!/bin/bash
+  2 
+  3 prop=$1
+  4 if [ "$prop" == "" ]; then
+  5         read -p "请输入properties配置文件： " prop
+  6 fi
+  7 if [ ! -f "$prop" ]; then
+  8         echo $prop 'does not exists!'
+  9         exit
+ 10 fi
+ 11 
+ 12 ## 读取properties配置文件
+ 13 getProp()
+ 14 {
+ 15         cat $prop | awk -F= '/'"$1"'/{print $2}'
+ 16 }
+ 17 
+ 18 ip=`getProp ip`
+ 19 port=`getProp port`
+ 20 namespace=`getProp namespace`
+ 21 
+ 22 # 执行命令的方法
+ 23 function opera(){
+ 24         nohup java -Xms128m -Xmx512m -server -Dname=$2 -cp $(getLibs) $1 $ip $port $namespace > $2.log 2>&1 &
+ 25 }
+ 26 
+ 27 #获取所有jar包
+ 28 getLibs() {
+ 29         libs=.
+ 30         for file in `ls ./lib`
+ 31             do
+ 32                 libs=$libs:lib/$file
+ 33             done
+ 34         echo $libs
+ 35 }
+ 36 
+ 37 # 获取当前路径，作为watcher的name，以及log文件名称
+ 38 getServerName() {
+ 39         path=`pwd`
+ 40         bname_tmp=${path//\//\~}
+ 41         bname=${bname_tmp#\~}
+ 42         echo $bname
+ 43 }
+ 44 
+ 45 opera com.tescomm.datacollect.filewatcher.WatcherServer $(getServerName)
+ 46 
+ 47 
+ 48 # zk.properties
+ 49 #ip=10.95.3.136,10.95.3.138,10.95.3.139
+ 50 #port=2181
+ 51 #namespace=viki/datacollect
+

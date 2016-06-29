@@ -1,0 +1,27 @@
+<workflow-app name="${projectName}-antEmulation-wf" xmlns="uri:oozie:workflow:0.5">
+   <start to="AntEmulation"/>
+    <action name="AntEmulation">
+        <spark xmlns="uri:oozie:spark-action:0.1">
+            <job-tracker>${jobTracker}</job-tracker>
+            <name-node>${nameNode}</name-node>
+            <configuration>
+                <property>
+                    <name>mapred.compress.map.output</name>
+                    <value>true</value>
+                </property>
+            </configuration>
+            <master>${sparkMaster}</master>
+            <mode>${sparkMode}</mode>
+            <name>AntEmulation</name>
+            <class>com.tescomm.npno.etl.AntEmulation</class>
+            <jar>/lib/jts-1.14.jar,/lib/gt-main-14.3.jar,/lib/gt-metadata-14.3.jar,/lib/redisclient_2.10-2.12.jar,/lib/commons-pool-1.5.6.jar,/lib/jedis-2.1.0.jar,/lib/npno_2.10-1.0.jar</jar>
+            <arg>${taskID}</arg>
+        </spark>
+        <ok to="end"/>
+        <error to="fail"/>
+    </action>
+    <kill name="fail">
+      <message>error message[${wf:errorMessage(wf:actionData('${projectName}-antEmulation-node')["fail"])}]</message>
+    </kill>
+    <end name="end"/>
+</workflow-app>

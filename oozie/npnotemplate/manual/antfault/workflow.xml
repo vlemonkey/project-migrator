@@ -1,0 +1,32 @@
+<workflow-app name="${projectName}-antfault-wf" xmlns="uri:oozie:workflow:0.5">
+   <start to="antfault"/>
+    <action name="antfault">
+        <spark xmlns="uri:oozie:spark-action:0.1">
+            <job-tracker>${jobTracker}</job-tracker>
+            <name-node>${nameNode}</name-node>
+            <!--<prepare>
+                <delete path="${jobOutput}"/>
+            </prepare>-->
+            <configuration>
+                <property>
+                    <name>mapred.compress.map.output</name>
+                    <value>true</value>
+                </property>
+            </configuration>
+            <master>${sparkMaster}</master>
+            <mode>${sparkMode}</mode>
+            <name>indoorAntFaul</name>
+            <class>com.tescomm.npno.etl.IndoorAntFault</class>
+            <jar>/lib/npno_2.10-1.0.jar,/lib/redisclient_2.10-2.12.jar,/lib/commons-pool-1.5.6.jar,/lib/jedis-2.1.0.jar,/lib/mysql-connector-java-5.1.37.jar</jar>
+            <spark-opts>--executor-memory 2G --num-executors 3</spark-opts>
+            <arg>${sourcePath}</arg>
+            <arg>${taskID}</arg>
+        </spark>
+        <ok to="end"/>
+        <error to="fail"/>
+    </action>
+    <kill name="fail">
+        <message>error message[${wf:errorMessage(wf:actionData('${projectName}-antfault-wf')["fail"])}]</message>
+    </kill>
+    <end name="end"/>
+</workflow-app>
